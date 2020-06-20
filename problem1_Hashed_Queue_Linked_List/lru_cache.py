@@ -5,7 +5,7 @@ class Node:
         self.next = None
         self.prev = None
 
-class Queue:
+class PriorityQueue:
     def __init__(self):
         self.head = None
         self.tail = None
@@ -21,29 +21,37 @@ class Queue:
 
     def enqueue(self, key, value):
         new_node = Node(key, value)
+        # set new head to enqueue a very first node
         if self.head is None:
             self.head = new_node
             self.tail = self.head
+        # shift the tail, set reference between the old and new tails
         else:
             old_tail = self.tail
-            self.tail.next = new_node    # add data to the next attribute of the tail (i.e. the end of the queue)
-            self.tail = self.tail.next   # shift the tail (i.e., the back of the queue)
-            self.tail.prev = old_tail    # add tail.prev directed to the old tail
+            self.tail.next = new_node
+            self.tail = self.tail.next
+            self.tail.prev = old_tail
         self.length += 1
 
     def dequeue(self):
+        # Remove node from 1st position and return it
+        # nothing to dequeue when it is empty
         if self.is_empty():
             return None
-        node = self.head                 # copy the value to a local variable
+        # copy the head before modifying it
+        node = self.head
         self.length -= 1
+        # unset head to dequeue the last remaining node
         if self.is_single_node(node):
             self.head = None
             return node
-        self.head = self.head.next       # shift the head (i.e., the front of the queue)
-        self.head.prev = None            # remove head.prev
+        # shift the head, unset reference to the old head
+        self.head = self.head.next
+        self.head.prev = None
         return node
 
     def remove(self, node):
+        # Remove node from any position (not necessarily 1st node)
         if node == None:
             return
         old_prev = node.prev
@@ -75,49 +83,92 @@ class Queue:
 
 class LRU_Cache(object):
     def __init__(self, capacity, is_debug):
-        # Initialize class variables
+        """
+        Initialize LRU_Cache with specified attributes.
+
+        self.capacity(int): the maximum size of LRU_Cache
+        self.queue(class): to track cache key (least -> .. -> most recently used)
+        self.hashmaps(dictionary): hashmaps[key] = Node(key,value)
+        self.is_debug(boolean) = enable printing debug output
+        """
         self.capacity = capacity
-        self.queue = Queue()
+        self.queue = PriorityQueue()
         self.hashmaps = {}
         self.is_debug = is_debug
 
     def get(self, key):
-        # Retrieve item from provided key. Return -1 if nonexistent. 
-        node = self.hashmaps.get(key, None)
-        if node == None:
-            print(f"missing Cache[{key}] = -1")
+        """
+        Return value of specified cache key if it exists.
+        Return -1 if key is not present in the cache.
+
+        Args:
+        key(int): the cache key to get from cache
+
+        Return:
+        value(int): the cache value of the specified key
+        """
+        node_to_reshuffle = self.hashmaps.get(key, None)
+        # cache miss -> key is not present
+        if node_to_reshuffle == None:
+            if self.is_debug: print(f"missing Cache[{key}] = -1")
             return -1
-        # key is most recently used
-        self.arrange_mru(node.key, node.value, node, "hitting")
-        return node.value
+        # cache hit -> arrange_mru() to reshuffle most recently used key
+        self.arrange_mru(key, node_to_reshuffle.value, node_to_reshuffle, "hitting")
+        return node_to_reshuffle.value
 
     def set(self, key, value):
-        # Set the value if the key is not present in the cache. If the cache is at capacity remove the oldest item. 
+        """
+        Set the value if the key is not present in the cache.
+        Update the value if the key is existing in the cache.
+        If the cache hits capacity, remove the olders key (least recently used).
+
+        Args:
+        key(int): the cache key to set into cache
+        value(int): the cache value set for the specified key
+
+        Return: None
+        """
         if self.capacity <= 0:
             return
-        # if cache hit -> arrange_mru() & return early
-        node = self.hashmaps.get(key, None)
-        if node != None:
-            # key is most recently used
-            self.arrange_mru(node.key, node.value, node, "updating")
+        # when cache hits -> arrange_mru() to reshuffle existing key & return early
+        node_to_reshuffle = self.hashmaps.get(key, None)
+        if node_to_reshuffle != None:
+            self.arrange_mru(key, value, node_to_reshuffle, "updating")
             return
-        # queue hits capacity -> arrange_lru()
+        # when capacity hits -> arrange_lru() to provide capacity
         if self.queue.size() >= self.capacity:
             if self.is_debug: print(f"inserting Cache[{key}] = {value} into a full queue = {self.queue}")
-            self.arrange_lru(key, value)
-        # now as queue fits capacity -> arrange_mru()
+            self.arrange_lru()
+        # now as capacity fits -> arrange_mru() to store new key
         self.arrange_mru(key, value, None, "storing")
 
-    def arrange_mru(self, key, value, node, action):
-        # Arrange the Most Recently Used cache to the end of queue
-        self.queue.remove(node)
-        self.queue.enqueue(key, value)
+    def arrange_mru(self, key, new_value, node_to_reshuffle, action):
+        """
+        Arrange the Most Recently Used cache to the end of queue.
+        A shared function for storing, updating, and getting the cache.
+        Assign hashmaps[key] = Node(key,value) to the tail node.
+
+        Args:
+        key(int): the most recently used cache key
+        new_value(int): the cache value set for the specified key
+        node_to_reshuffle(class:Node): the node carrying key to reshuffle in the PriorityQueue
+        action(string): the helper string for debug ("storing", "updating", "hitting")
+
+        Return: None
+        """
+        self.queue.remove(node_to_reshuffle)
+        self.queue.enqueue(key, new_value)
         self.hashmaps[key] = self.queue.tail
-        print(f"{action} Cache[{key}] = {value}")
+        if self.is_debug: print(f"{action} Cache[{key}] = {new_value}")
         if self.is_debug: print(f"current queue = {self.queue}\n")
 
-    def arrange_lru(self, key, value):
-        # Pop the Least Recently Used cache from the beginning of queue
+    def arrange_lru(self):
+        """
+        Pop the Least Recently Used cache from the beginning of queue.
+
+        Args: None
+        Return: None
+        """
         node = self.queue.dequeue()
         self.hashmaps.pop(node.key, None)
         if self.is_debug: print(f"deleting LRU Cache[{node.key}] = {node.value}")
