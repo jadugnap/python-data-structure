@@ -37,11 +37,8 @@ def handle_mismatch_suffix(joined_path, suffix, debug, spacing, index):
 def find_files(fullpath, suffix, debug=False, spacing=''):
     """
     Find all files beneath path with file name suffix.
-
-    Note that a path may contain further subdirectories
-    and those subdirectories may also contain further subdirectories.
-
-    There are no limit to the depth of the subdirectories can be.
+    Note that a path may contain subdirectories of further subdirectories.
+    There is no limit to the depth of the subdirectories can be.
 
     Args:
       path(str): path of the file system
