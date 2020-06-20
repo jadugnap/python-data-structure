@@ -35,9 +35,12 @@ class Queue:
         if self.is_empty():
             return None
         node = self.head                 # copy the value to a local variable
+        self.length -= 1
+        if self.is_single_node(node):
+            self.head = None
+            return node
         self.head = self.head.next       # shift the head (i.e., the front of the queue)
         self.head.prev = None            # remove head.prev
-        self.length -= 1
         return node
 
     def remove(self, node):
@@ -67,6 +70,9 @@ class Queue:
     def is_tail(self, node):
         return node.next == None
 
+    def is_single_node(self, node):
+        return self.is_head(node) and self.is_tail(node)
+
 class LRU_Cache(object):
     def __init__(self, capacity, is_debug):
         # Initialize class variables
@@ -87,6 +93,8 @@ class LRU_Cache(object):
 
     def set(self, key, value):
         # Set the value if the key is not present in the cache. If the cache is at capacity remove the oldest item. 
+        if self.capacity <= 0:
+            return
         # if cache hit -> arrange_mru() & return early
         node = self.hashmaps.get(key, None)
         if node != None:
