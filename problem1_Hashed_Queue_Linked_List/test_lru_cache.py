@@ -1,6 +1,6 @@
 from lru_cache import LRU_Cache
 
-def test_lru_cache():
+def test_lru_cache_reach_capacity():
     our_cache = LRU_Cache(5, is_debug=True)
     our_cache.set(1, 11)
     our_cache.set(2, 12)
@@ -23,3 +23,18 @@ def test_lru_cache():
 
     assert(our_cache.get(3)==-1)
     # returns -1 because the cache reached it's capacity and 3 was the least recently used entry
+
+def test_lru_cache_single_capacity():
+    our_cache = LRU_Cache(1, is_debug=True)
+    our_cache.set(1, 11)
+    our_cache.set(2, 12)
+
+    assert(our_cache.get(1)==-1)
+    # returns -1 due to single capacity
+
+def test_lru_cache_no_capacity():
+    our_cache = LRU_Cache(0, is_debug=True)
+    our_cache.set(1, 11)
+
+    assert(our_cache.get(1)==-1)
+    # returns -1 due to no capacity
